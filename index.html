@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infusive — Multi-Pharmacy Prescription Fulfillment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,75..125,100..900;1,75..125,100..900&display=swap" rel="stylesheet">
+<style>
+
+/* ─── TOKENS ─── */
+:root {
+  --bg:         #0e0618;
+  --bg-mid:     #180b28;
+  --bg-surface: #1f0f35;
+  --text:       #f3e8ff;
+  --text-dim:   rgba(225,205,245,0.62);
+  --text-muted: rgba(190,165,225,0.38);
+  --border:     rgba(167,139,250,0.1);
+  --red-glow:   rgba(248,113,113,0.10);
+  --red-border: rgba(248,113,113,0.22);
+  --radius:     10px;
+  --radius-lg:  16px;
+
+  /* shared label gradient */
+  --label-grad: linear-gradient(90deg, #8DBAFE 0%, #B5C9FE 52%, #D674EB 100%);
+
+  /* button — vertical bottom-to-top: deep purple → pink */
+  --btn-grad: linear-gradient(0deg, #28065A 0%, #D93E66 100%);
+
+  /* stats gradient */
+  --stat-grad: linear-gradient(90deg, #8DBAFE 0%, #B5C9FE 52%, #D674EB 100%);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 400;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+.container { padding: 0 clamp(24px, 6.5vw, 140px); }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top:0; left:0; right:0; z-index:200;
+  padding: 16px 0;
+  background: rgba(14,6,24,0.85);
+  backdrop-filter: blur(28px) saturate(1.4);
+  border-bottom: 1px solid rgba(167,139,250,0.08);
+}
+.nav-inner { display:flex; align-items:center; justify-content:space-between; gap: 32px; }
+.nav-logo img { height:30px; display:block; }
+.nav-links {
+  display: flex; align-items: center; gap: 36px;
+  list-style: none;
+  flex: 1; justify-content: center;
+}
+.nav-links a {
+  font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 500;
+  font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase;
+  color: rgba(225,205,245,0.60);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: rgba(243,232,255,0.95); }
+
+/* ─── BUTTON — vertical gradient + stroke from spec ─── */
+.btn {
+  display: inline-flex; align-items:center; gap:10px;
+  font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 600;
+  font-size: 14px; letter-spacing:0.04em; text-transform:uppercase;
+  color: rgba(255,255,255,0.95); text-decoration: none;
+  cursor: pointer; border: none;
+  padding: 13px 30px; border-radius: 60px;
+  background: var(--btn-grad);
+  box-shadow:
+    10px 13px 27px rgba(20,21,42,0.50),
+    inset 5px 2px 15px rgba(255,255,255,0.25);
+  outline: 1px solid #3F327A;
+  transition: transform 0.25s, box-shadow 0.25s, filter 0.25s;
+  position: relative; overflow: hidden;
+  white-space: nowrap;
+}
+.btn::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 60%);
+  opacity:1; pointer-events:none;
+}
+.btn:hover { transform:translateY(-2px); filter: brightness(1.08); }
+.btn:hover svg { transform:translateX(3px); }
+.btn svg { transition: transform 0.25s; }
+.btn-hero { padding: 16px 40px; font-size: 15px; }
+
+/* ─── HERO ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#heroCanvas {
+  position: absolute; inset:0;
+  width:100%; height:100%;
+  z-index: 0;
+}
+
+.hero-veil {
+  position: absolute; inset:0; z-index:1; pointer-events:none;
+  background: linear-gradient(
+    106deg,
+    #0e0618 0%,
+    #0e0618 22%,
+    rgba(14,6,24,0.97) 33%,
+    rgba(14,6,24,0.82) 44%,
+    rgba(14,6,24,0.30) 58%,
+    transparent 74%
+  );
+}
+.hero-bottom-veil {
+  position: absolute; bottom:0; left:0; right:0; height:150px;
+  background: linear-gradient(to top, #0e0618 0%, transparent 100%);
+  z-index:1; pointer-events:none;
+}
+
+.hero-body {
+  position: relative; z-index:2;
+  flex:1; display:flex; align-items:center;
+  padding: 138px 0 48px;
+}
+.hero-stats-wrap {
+  position: relative; z-index:2;
+  padding-bottom: 52px;
+  opacity:0; animation: rise 0.7s 0.42s ease forwards;
+}
+
+/* 72/28 split — wide enough for 2-line headline at 1440px+ */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 72fr 28fr;
+  align-items: center;
+  width: 100%;
+}
+
+/* ── Eyebrow ── */
+.hero-eyebrow {
+  display: block;
+  font-variation-settings: 'wdth' 100, 'wght' 700;
+  font-size: 13px; letter-spacing:2px; text-transform:uppercase;
+  background: var(--label-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 20px;
+  line-height: 1.8;
+  opacity:0; animation: rise 0.7s 0.05s ease forwards;
+}
+
+/* ── H1 ── */
+.hero h1 {
+  font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 112.5, 'wght' 700;
+  font-stretch: semi-expanded;
+  font-size: clamp(26px, 2.8vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+  color: #FFFFFF;
+  margin-bottom: 28px;
+  opacity:0; animation: rise 0.7s 0.15s ease forwards;
+}
+.hero h1 .grad {
+  display: block;
+  color: #FFFFFF;
+  text-shadow: 0px 4px 16px rgba(238, 216, 76, 1.00);
+}
+
+/* ── Hero subtitle ── */
+.hero-subtitle {
+  font-variation-settings: 'wdth' 100, 'wght' 400;
+  font-size: 20px; line-height: 1.68;
+  color: var(--text-dim);
+  max-width: 520px;
+  margin-bottom: 36px;
+  opacity:0; animation: rise 0.7s 0.22s ease forwards;
+}
+.hero-subtitle strong {
+  font-variation-settings: 'wdth' 100, 'wght' 700;
+  color: rgba(243,232,255,0.88);
+}
+
+.hero-cta {
+  opacity:0; animation: rise 0.7s 0.32s ease forwards;
+}
+
+/* ─── STATS BAR ─── */
+.hero-stats {
+  display:grid; grid-template-columns: repeat(4,1fr);
+  background: rgba(26,10,44,0.75);
+  border: 1px solid rgba(167,139,250,0.16);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px);
+  overflow:hidden;
+}
+.hero-stat {
+  padding: 26px 20px; text-align:center;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.hero-stat:last-child { border-right:none; }
+.hero-stat strong {
+  display:block;
+  font-variation-settings: 'wdth' 112.5, 'wght' 700;
+  font-size: 34px; line-height:1; margin-bottom:6px;
+  background: var(--stat-grad);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.hero-stat span {
+  font-variation-settings: 'wdth' 100, 'wght' 500;
+  font-size: 11.5px; color: var(--text-muted); letter-spacing:0.4px;
+}
+
+/* ─── LOGOS BAND ─── */
+.logos-band {
+  position: relative; z-index:2;
+  padding: 24px 0;
+  background: rgba(20,8,36,0.7);
+  border-top: 1px solid rgba(167,139,250,0.08);
+  overflow:hidden;
+}
+.logos-band::before, .logos-band::after {
+  content:''; position:absolute; top:0; bottom:0; width:120px; z-index:2; pointer-events:none;
+}
+.logos-band::before { left:0;  background: linear-gradient(to right, var(--bg-mid), transparent); }
+.logos-band::after  { right:0; background: linear-gradient(to left,  var(--bg-mid), transparent); }
+.logos-label {
+  text-align:center;
+  font-variation-settings: 'wdth' 100, 'wght' 600;
+  font-size: 10px; letter-spacing:2.5px; text-transform:uppercase;
+  color: var(--text-muted); margin-bottom:18px;
+}
+.marquee { overflow:hidden; }
+.marquee-track {
+  display:flex; align-items:center; gap:60px; width:max-content;
+  animation: marqueeScroll 38s linear infinite;
+}
+.marquee-logo {
+  display: flex; align-items:center; justify-content:center;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.marquee-logo img {
+  height: 36px;
+  max-width: 120px;
+  opacity: 0.38;
+  filter: brightness(1.3) grayscale(0.1);
+  object-fit: contain;
+}
+.marquee-logo img[alt="Excel Medical"] {
+  height: 24px;
+  max-width: 100px;
+}
+@keyframes marqueeScroll {
+  0%   { transform:translateX(0); }
+  100% { transform:translateX(calc(-50% - 30px)); }
+}
+
+/* ─── PROBLEM SECTION ─── */
+.problem {
+  background: var(--bg-surface);
+  padding: 108px 0 116px;
+  position: relative; overflow:hidden;
+}
+.problem::before {
+  content:''; position:absolute;
+  top:-120px; left:50%; transform:translateX(-50%);
+  width:820px; height:580px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(139,70,200,0.18) 0%, rgba(100,40,170,0.10) 35%, transparent 70%);
+  pointer-events:none;
+}
+.problem::after {
+  content:''; position:absolute; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  pointer-events:none;
+  mix-blend-mode: overlay;
+}
+.problem-inner {
+  max-width: 860px; margin: 0 auto;
+  text-align: center;
+  position:relative; z-index:1;
+}
+.problem-label {
+  display: inline-block;
+  font-variation-settings: 'wdth' 100, 'wght' 700;
+  font-size: 12px; letter-spacing:3px; text-transform:uppercase;
+  background: var(--label-grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 28px;
+}
+.problem h2 {
+  font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 112.5, 'wght' 700;
+  font-stretch: semi-expanded;
+  font-size: clamp(28px, 3.8vw, 52px);
+  line-height: 1.12; letter-spacing:-0.6px;
+  color: #f3eaff; margin-bottom: 22px;
+}
+.problem h2 em {
+  font-style:italic; color: #a78bfa;
+  font-variation-settings: 'wdth' 112.5, 'wght' 700;
+}
+.problem-intro {
+  font-variation-settings: 'wdth' 100, 'wght' 400;
+  font-size: 17px; line-height: 1.72;
+  color: var(--text-dim);
+  max-width: 580px; margin: 0 auto 52px;
+}
+.problem-list {
+  list-style:none; display:flex; flex-direction:column; gap:11px;
+  text-align: left;
+}
+.problem-list li {
+  display:flex; align-items:flex-start; gap:15px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(167,139,250,0.08);
+  border-radius: var(--radius);
+  padding: 20px 26px;
+  font-variation-settings: 'wdth' 100, 'wght' 500;
+  font-size: 15.5px; line-height: 1.52;
+  color: rgba(225,205,245,0.82);
+  transition: background 0.25s, border-color 0.25s, transform 0.25s;
+  cursor: default;
+}
+.problem-list li:hover {
+  background: rgba(248,113,113,0.04);
+  border-color: var(--red-border);
+  transform: translateX(4px);
+}
+.x-icon {
+  width:24px; height:24px; min-width:24px; border-radius:7px;
+  background: var(--red-glow); border: 1px solid var(--red-border);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; margin-top:1px;
+}
+
+/* ─── HUB ICON OVERLAY ─── */
+#hubIcon {
+  position: absolute;
+  z-index: 2;
+  width: 48px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 12px rgba(180,120,255,0.60)) brightness(1.15);
+  opacity: 0.85;
+}
+
+/* ─── KEYFRAMES ─── */
+@keyframes rise {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width:1000px) {
+  .hero-grid { grid-template-columns:1fr; }
+  .nav-links { display: none; }
+}
+@media (max-width:720px) {
+  .hero-stats { grid-template-columns:repeat(2,1fr); }
+  .hero-stat { border-right:none; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .hero-stat:nth-child(odd) { border-right:1px solid rgba(255,255,255,0.05); }
+  .hero-stat:nth-child(3),.hero-stat:nth-child(4) { border-bottom:none; }
+  .container { padding:0 22px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container nav-inner">
+    <a href="#" class="nav-logo"><img src="Logo.svg" alt="Infusive" /></a>
+    <ul class="nav-links">
+      <li><a href="#">About</a></li>
+      <li><a href="#">Platform</a></li>
+      <li><a href="#">Contact</a></li>
+      <li><a href="#">Partner Portal</a></li>
+    </ul>
+    <a href="#" class="btn">
+      Apply Now
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7h9M7.5 3l4 4-4 4"/></svg>
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="heroCanvas"></canvas>
+  <img id="hubIcon" src="infusive%20logo%20icon.svg" alt="" aria-hidden="true">
+  <div class="hero-veil"></div>
+  <div class="hero-bottom-veil"></div>
+
+  <div class="hero-body">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="hero-eyebrow">
+            Multi-Pharmacy Prescription Fulfillment&nbsp;&nbsp;·<br>Dedicated To The Wellness Industry.
+          </div>
+          <h1>
+            One Portal. Multiple Pharmacies.<br>
+            <span class="grad">All The Options. Built To Scale.</span>
+          </h1>
+          <p class="hero-subtitle">
+            Everything you want from a single pharmacy platform.<br>
+            <strong>Without being stuck with one pharmacy.</strong>
+          </p>
+          <div class="hero-cta">
+            <a href="#" class="btn btn-hero">
+              Book Your Demo
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5h9M8.5 3.5l4 4-4 4"/></svg>
+            </a>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-stats-wrap">
+    <div class="container">
+      <div class="hero-stats">
+        <div class="hero-stat"><strong>[X]</strong><span>Pharmacy Partners</span></div>
+        <div class="hero-stat"><strong>[X]K+</strong><span>Products Available</span></div>
+        <div class="hero-stat"><strong>50</strong><span>State Fulfillment</span></div>
+        <div class="hero-stat"><strong>$15</strong><span>Shipping As Low As</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGOS BAND -->
+<div class="logos-band">
+  <p class="logos-label">Powering Prescribing For…</p>
+  <div class="marquee">
+    <div class="marquee-track" aria-hidden="true">
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+      <!-- duplicate set for seamless loop -->
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/excelmedical_logo_header%203.png" alt="Excel Medical"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/iCRYO-Logos-stamp-white-1-r4cp2c37sacsph73uufecs5gfqd80uqvyv94p03hmo%203.png" alt="iCryo"></div>
+      <div class="marquee-logo"><img src="scrolling%20logos/Hydrate%2BFull%2BLogo-White%202.png" alt="Hydrate"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEM SECTION -->
+<section class="problem">
+  <div class="container">
+    <div class="problem-inner">
+      <div>
+        <div class="problem-label">The Multi-Account Trap</div>
+        <h2>Most practices are juggling five or six pharmacy accounts just to <em>get what they need.</em></h2>
+        <p class="problem-intro">You shouldn't have to manage multiple pharmacy accounts just to run your business. But if you're like most wellness operators, you're...</p>
+      </div>
+      <div>
+        <ul class="problem-list">
+          <li>
+            <span class="x-icon" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Logging into multiple pharmacy portals to find what your patients need
+          </li>
+          <li>
+            <span class="x-icon" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Managing separate accounts, invoices, and relationships to band-aid together pricing
+          </li>
+          <li>
+            <span class="x-icon" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Splitting patient orders across pharmacies because no single one has everything
+          </li>
+          <li>
+            <span class="x-icon" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Tracking shipments from different sources and hoping they all arrive
+          </li>
+          <li>
+            <span class="x-icon" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Spending more time on procurement than patient care
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CANVAS ANIMATION -->
+<script>
+(function () {
+  'use strict';
+
+  const canvas = document.getElementById('heroCanvas');
+  const ctx    = canvas.getContext('2d');
+
+  let W, H, DPR;
+  let hub, nodes, particles;
+  let waveDots, bokeh;
+  let t0 = null, raf;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W   = canvas.offsetWidth;
+    H   = canvas.offsetHeight;
+    canvas.width  = W * DPR;
+    canvas.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    setup();
+  }
+
+  function setup() {
+    hub = { x: W * 0.715, y: H * 0.44, r: 60 };
+
+    const iconEl = document.getElementById('hubIcon');
+    if (iconEl) {
+      iconEl.style.left = hub.x + 'px';
+      iconEl.style.top  = hub.y + 'px';
+    }
+
+    const specs = [
+      {a: -18, rx:1.05, ry:0.60, r:25},
+      {a:  30, rx:1.32, ry:0.74, r:21},
+      {a:  72, rx:1.08, ry:0.63, r:27},
+      {a: 114, rx:1.38, ry:0.80, r:20},
+      {a: 158, rx:1.06, ry:0.61, r:24},
+      {a: 202, rx:1.26, ry:0.72, r:21},
+      {a: 246, rx:1.04, ry:0.59, r:26},
+      {a: 290, rx:1.35, ry:0.76, r:22},
+      {a: 332, rx:1.55, ry:0.65, r:20},
+      {a:  52, rx:0.66, ry:0.41, r:18},
+    ];
+    const BASE = 228;
+
+    nodes = specs.map((s, i) => {
+      const rad = s.a * Math.PI / 180;
+      const bx  = hub.x + Math.cos(rad) * BASE * s.rx;
+      const by  = hub.y + Math.sin(rad) * BASE * s.ry;
+      return {
+        bx, by, x: bx, y: by,
+        r: s.r,
+        phase: (i / specs.length) * Math.PI * 2,
+        floatHz: 1 / (9000 + i * 800),
+        active: i < 8,
+      };
+    });
+
+    particles = Array.from({length: 100}, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: 0.4 + Math.random() * 1.5,
+      op: 0.07 + Math.random() * 0.28,
+      vx: (Math.random() - 0.5) * 0.11,
+      vy: (Math.random() - 0.5) * 0.11,
+      warm: Math.random() > 0.5,
+    }));
+
+    waveDots = [];
+    const WAVE_ROWS = 8;
+    const DOTS_PER_ROW = 320;
+    for (let row = 0; row < WAVE_ROWS; row++) {
+      for (let i = 0; i < DOTS_PER_ROW; i++) {
+        waveDots.push({
+          xr:     i / DOTS_PER_ROW,
+          yOff:   (Math.random() - 0.5) * 9,
+          row,
+          r:      0.6 + Math.random() * 1.1,
+          baseOp: 0.16 + Math.random() * 0.10,
+          warm:   Math.random() > 0.42,
+        });
+      }
+    }
+
+    bokeh = Array.from({length: 60}, () => ({
+      xr:    Math.random(),
+      yBase: 0.08 + Math.random() * 0.84,
+      r:     5 + Math.random() * 18,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.000035 + Math.random() * 0.000055,
+      warm:  Math.random() > 0.38,
+    }));
+  }
+
+  function drawBackground(t) {
+    const g = ctx.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, W * 0.58);
+    g.addColorStop(0,    'rgba(200,50,240,0.13)');
+    g.addColorStop(0.30, 'rgba(130,30,180,0.07)');
+    g.addColorStop(1,    'transparent');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    const sp = 44;
+    const cols = Math.ceil(W / sp) + 2;
+    const rows = Math.ceil(H / sp) + 2;
+    const ox = hub.x - cols * sp * 0.5 + Math.cos(t * 0.00012) * 5;
+    const oy = hub.y - rows * sp * 0.5 + Math.sin(t * 0.00015) * 6;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const px = ox + c * sp, py = oy + r * sp;
+        const dx = px - hub.x, dy = py - hub.y;
+        const op = Math.max(0, 0.075 - Math.sqrt(dx*dx + dy*dy) / 2400);
+        if (op < 0.004) continue;
+        ctx.beginPath(); ctx.arc(px, py, 1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(180,100,230,${op})`; ctx.fill();
+      }
+    }
+  }
+
+  function drawWave(t) {
+    const rowParams = [
+      { yBase: 0.14, amp: 0.055, freq: 1.3, spd: 0.000038, ph: 0.00 },
+      { yBase: 0.25, amp: 0.070, freq: 1.7, spd: 0.000048, ph: 1.10 },
+      { yBase: 0.37, amp: 0.080, freq: 1.5, spd: 0.000055, ph: 2.20 },
+      { yBase: 0.48, amp: 0.090, freq: 1.9, spd: 0.000043, ph: 0.85 },
+      { yBase: 0.58, amp: 0.075, freq: 1.6, spd: 0.000050, ph: 3.40 },
+      { yBase: 0.68, amp: 0.065, freq: 2.0, spd: 0.000060, ph: 1.70 },
+      { yBase: 0.78, amp: 0.055, freq: 1.4, spd: 0.000040, ph: 2.60 },
+      { yBase: 0.88, amp: 0.045, freq: 1.8, spd: 0.000053, ph: 0.50 },
+    ];
+
+    bokeh.forEach(b => {
+      const x  = b.xr * W;
+      const y  = H * b.yBase + Math.sin(t * b.speed * 6283 + b.phase) * H * 0.022;
+      const op = 0.04 + 0.05 * Math.sin(t * b.speed * 12566 + b.phase + 1.2);
+      if (op < 0.004) return;
+      const grd = ctx.createRadialGradient(x, y, 0, x, y, b.r);
+      grd.addColorStop(0,  b.warm ? `rgba(200,70,255,${op})` : `rgba(255,80,190,${op})`);
+      grd.addColorStop(1,  'transparent');
+      ctx.beginPath(); ctx.arc(x, y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = grd; ctx.fill();
+    });
+
+    waveDots.forEach(d => {
+      const rp  = rowParams[d.row];
+      const x   = d.xr * W;
+      const waveY = H * rp.yBase
+                  + Math.sin(d.xr * Math.PI * rp.freq * 2 + t * rp.spd + rp.ph) * H * rp.amp
+                  + Math.sin(d.xr * Math.PI * rp.freq * 0.6 + t * rp.spd * 0.7 + rp.ph + 1.3) * H * rp.amp * 0.35;
+      const y = waveY + d.yOff;
+      if (y < 0 || y > H) return;
+      const density = 0.40 + 0.60 * Math.abs(Math.sin(d.xr * Math.PI * 4.5 + t * 0.000030 + rp.ph));
+      const op = d.baseOp * density;
+      if (op < 0.004) return;
+      ctx.beginPath(); ctx.arc(x, y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = d.warm ? `rgba(205,80,255,${op})` : `rgba(255,90,195,${op})`;
+      ctx.fill();
+    });
+  }
+
+  function drawHub(t) {
+    const pulse = (Math.sin(t * 0.00095) + 1) * 0.5;
+
+    const bloom = ctx.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, 240);
+    bloom.addColorStop(0,    `rgba(220,60,255,${0.28 + pulse * 0.14})`);
+    bloom.addColorStop(0.40, `rgba(170,40,220,${0.14 + pulse * 0.07})`);
+    bloom.addColorStop(1,     'transparent');
+    ctx.beginPath(); ctx.arc(hub.x, hub.y, 240, 0, Math.PI * 2);
+    ctx.fillStyle = bloom; ctx.fill();
+
+    const inner = ctx.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, 110);
+    inner.addColorStop(0,  `rgba(255,120,255,${0.38 + pulse * 0.20})`);
+    inner.addColorStop(1,   'transparent');
+    ctx.beginPath(); ctx.arc(hub.x, hub.y, 110, 0, Math.PI * 2);
+    ctx.fillStyle = inner; ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(hub.x, hub.y, hub.r + 14 + pulse * 14, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(240,80,255,${0.18 + pulse * 0.14})`; ctx.lineWidth = 1.2; ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(hub.x, hub.y, hub.r + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,110,255,${0.32 + pulse * 0.18})`; ctx.lineWidth = 1; ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(hub.x, hub.y, hub.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(250,80,255,${0.90 + pulse * 0.10})`; ctx.lineWidth = 2.6; ctx.stroke();
+
+    const fill = ctx.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, hub.r - 3);
+    fill.addColorStop(0,    `rgba(255,245,255,${0.82 + pulse * 0.18})`);
+    fill.addColorStop(0.45, `rgba(230,100,255,${0.45 + pulse * 0.15})`);
+    fill.addColorStop(1,    `rgba(140,30,200,0.05)`);
+    ctx.beginPath(); ctx.arc(hub.x, hub.y, hub.r - 3, 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill();
+
+    const rot = t * 0.00048;
+    for (let i = 0; i < 4; i++) {
+      const a = rot + (i / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(hub.x + Math.cos(a) * (hub.r - 10), hub.y + Math.sin(a) * (hub.r - 10));
+      ctx.lineTo(hub.x + Math.cos(a) * (hub.r - 3),  hub.y + Math.sin(a) * (hub.r - 3));
+      ctx.strokeStyle = `rgba(255,240,255,${0.70 + pulse * 0.25})`; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+
+  function drawConnection(node, t) {
+    const mx  = (hub.x + node.x) * 0.5;
+    const my  = (hub.y + node.y) * 0.5;
+    const ndx = node.y - hub.y, ndy = -(node.x - hub.x);
+    const len = Math.sqrt(ndx*ndx + ndy*ndy) || 1;
+    const wave = Math.sin(t * 0.00032 + node.phase) * 10;
+    const cpx  = mx + (ndx / len) * len * 0.24 + wave;
+    const cpy  = my + (ndy / len) * len * 0.24 + wave * 0.4;
+
+    const lo = node.active ? 0.55 : 0.13;
+    ctx.beginPath(); ctx.moveTo(hub.x, hub.y);
+    ctx.quadraticCurveTo(cpx, cpy, node.x, node.y);
+    const lg = ctx.createLinearGradient(hub.x, hub.y, node.x, node.y);
+    lg.addColorStop(0, `rgba(240,80,255,${lo})`);
+    lg.addColorStop(1, `rgba(160,80,230,${lo * 0.55})`);
+    ctx.strokeStyle = lg; ctx.lineWidth = node.active ? 1.5 : 0.8; ctx.stroke();
+
+    if (!node.active) return;
+
+    for (let k = 0; k < 2; k++) {
+      const p = ((t * node.floatHz * 12.8 + k * 0.5) % 1 + 1) % 1;
+      const q = 1 - p;
+      const dx = q*q*hub.x + 2*q*p*cpx + p*p*node.x;
+      const dy = q*q*hub.y + 2*q*p*cpy + p*p*node.y;
+      const dg = ctx.createRadialGradient(dx, dy, 0, dx, dy, 10);
+      dg.addColorStop(0, 'rgba(255,140,255,0.60)'); dg.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(dx, dy, 10, 0, Math.PI * 2); ctx.fillStyle = dg; ctx.fill();
+      ctx.beginPath(); ctx.arc(dx, dy, k === 0 ? 3.0 : 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = k === 0 ? 'rgba(255,220,255,1)' : 'rgba(230,100,255,0.9)'; ctx.fill();
+    }
+  }
+
+  function drawNode(node, t) {
+    const p2 = (Math.sin(t * 0.0022 + node.phase) + 1) * 0.5;
+    const a  = node.active ? 1.0 : 0.45;
+
+    const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, node.r + 24);
+    glow.addColorStop(0,  `rgba(200,50,240,${0.30 * a + p2 * 0.12})`); glow.addColorStop(1, 'transparent');
+    ctx.beginPath(); ctx.arc(node.x, node.y, node.r + 24, 0, Math.PI * 2); ctx.fillStyle = glow; ctx.fill();
+
+    const fill = ctx.createRadialGradient(node.x, node.y - 5, 2, node.x, node.y, node.r);
+    fill.addColorStop(0, `rgba(150,60,210,${0.50 * a})`); fill.addColorStop(1, `rgba(50,10,90,${0.60 * a})`);
+    ctx.beginPath(); ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(240,80,255,${(node.active ? 0.70 + p2 * 0.30 : 0.25 + p2 * 0.12) * a})`;
+    ctx.lineWidth = 1.8; ctx.stroke();
+
+    ctx.save();
+    ctx.font = `bold ${Math.round(node.r * 0.62)}px 'Archivo', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = `rgba(248,220,255,${0.82 * a})`;
+    ctx.fillText('Rx', node.x, node.y + 1);
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    particles.forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.warm ? `rgba(220,120,255,${p.op})` : `rgba(180,100,240,${p.op})`; ctx.fill();
+      p.x += p.vx; if (p.x < -2) p.x = W + 2; if (p.x > W + 2) p.x = -2;
+      p.y += p.vy; if (p.y < -2) p.y = H + 2; if (p.y > H + 2) p.y = -2;
+    });
+  }
+
+  function render(ts) {
+    if (t0 === null) t0 = ts;
+    const t = ts - t0;
+
+    ctx.clearRect(0, 0, W, H);
+
+    drawBackground(t);
+    drawWave(t);
+    drawParticles();
+
+    nodes.forEach(node => {
+      node.x = node.bx + Math.sin(t * node.floatHz * Math.PI * 2        + node.phase) * 5;
+      node.y = node.by + Math.cos(t * node.floatHz * Math.PI * 2 * 1.30 + node.phase) * 4;
+      drawConnection(node, t);
+    });
+    nodes.forEach(node => drawNode(node, t));
+    drawHub(t);
+
+    raf = requestAnimationFrame(render);
+  }
+
+  function boot() { resize(); raf = requestAnimationFrame(render); }
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { cancelAnimationFrame(raf); t0 = null; resize(); raf = requestAnimationFrame(render); }, 100);
+  });
+
+  if (document.fonts?.ready) { document.fonts.ready.then(boot); } else { boot(); }
+
+})();
+</script>
+
+</body>
+</html>
